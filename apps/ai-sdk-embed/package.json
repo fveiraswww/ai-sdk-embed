@@ -1,0 +1,62 @@
+{
+  "name": "ai-sdk-embed",
+  "version": "0.0.1",
+  "description": "Semantic caching layer for AI SDK. Automatically generates embeddings for prompts, stores them in Upstash Vector and Redis, and reuses semantically similar responses to reduce token costs.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "bun run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ai",
+    "ai-sdk",
+    "vercel",
+    "cache",
+    "semantic",
+    "semantic-cache",
+    "vector",
+    "upstash",
+    "redis",
+    "embedding",
+    "llm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ai-sdk-embed.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/ai-sdk-embed/issues"
+  },
+  "homepage": "https://github.com/yourusername/ai-sdk-embed#readme",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "ai": "^5.0.60"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.5",
+    "@upstash/vector": "^1.2.2",
+    "dotenv": "^17.2.3",
+    "zod": "4.1.12"
+  }
+}
