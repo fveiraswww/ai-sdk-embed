@@ -19,7 +19,7 @@
   import { createSemanticCache } from "ai-sdk-embed";
   
   const semantic = createSemanticCache({
-    model: "openai:text-embedding-3-small",
+    model: "text-embedding-3-small",
   });
   
   const result = await semantic.streamText({
@@ -33,7 +33,7 @@
   import { createSemanticCache } from "ai-sdk-embed";
   
   const semantic = createSemanticCache({
-    model: "openai:text-embedding-3-small",
+    model: "text-embedding-3-small",
   });
   
   const result = await semantic.generateText({
