@@ -1,6 +1,6 @@
 {
   "name": "ai-sdk-embed",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Semantic caching layer for AI SDK. Automatically generates embeddings for prompts, stores them in Upstash Vector and Redis, and reuses semantically similar responses to reduce token costs.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -55,6 +55,7 @@
     "ai": "^5.0.0"
   },
   "dependencies": {
+    "@ai-sdk/provider": "^2.0.0",
     "@upstash/redis": "^1.35.5",
     "@upstash/vector": "^1.2.2",
     "dotenv": "^17.2.3",

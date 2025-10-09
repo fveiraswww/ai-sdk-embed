@@ -1,6 +1,6 @@
 import type { MyUIMessage } from "@/util/chat-schema";
 import { readChat, saveChat } from "@util/chat-store";
-import { convertToModelMessages, generateId, streamText } from "ai";
+import { convertToModelMessages, gateway, generateId, streamText } from "ai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
 import { createSemanticCache } from "ai-sdk-embed";
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   });
 
   const result = await semantic.streamText({
-    model: "openai/gpt-5-mini",
+    model: gateway("openai/gpt-5"),
     messages: convertToModelMessages(messages),
     abortSignal: userStopSignal.signal,
   });

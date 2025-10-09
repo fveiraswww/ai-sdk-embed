@@ -1,16 +1,24 @@
 import {
+  type LanguageModelV2Middleware,
+  type LanguageModelV2StreamPart,
+  type LanguageModelV2Content,
+} from "@ai-sdk/provider";
+import {
   embed,
   streamText,
   generateText,
   generateObject,
   streamObject,
   simulateReadableStream,
+  wrapLanguageModel,
   type EmbeddingModel,
   type StreamTextResult,
   type GenerateTextResult,
   type GenerateObjectResult,
   type StreamObjectResult,
+  gateway,
 } from "ai";
+
 import { Index } from "@upstash/vector";
 import { Redis } from "@upstash/redis";
 import * as crypto from "node:crypto";
@@ -96,7 +104,7 @@ export function createSemanticCache(config: SemanticCacheConfig) {
     return "";
   }
 
-  async function checkCache(cacheInput: string, scope: any) {
+  async function checkSemanticCache(cacheInput: string, scope: any) {
     const promptNorm = norm(cacheInput);
 
     const { embedding } = await embed({
@@ -126,8 +134,9 @@ export function createSemanticCache(config: SemanticCacheConfig) {
 
     if (hit) {
       const cached = await redis.get<{
-        streamParts?: any[];
+        streamParts?: LanguageModelV2StreamPart[];
         text?: string;
+        content?: LanguageModelV2Content;
         [key: string]: any;
       }>(hit.id.toString());
 
@@ -174,79 +183,128 @@ export function createSemanticCache(config: SemanticCacheConfig) {
     }
   }
 
-  return {
-    streamText: async <TOOLS extends Record<string, any> = {}>(
-      options: Parameters<typeof streamText<TOOLS>>[0],
-    ): Promise<StreamTextResult<TOOLS, any> | ReadableStream<any>> => {
-      const cacheInput = getCacheKey(options);
-      const scope = buildScope(options);
+  let currentOptions: any = {};
+
+  const semanticCacheMiddleware: LanguageModelV2Middleware = {
+    wrapStream: async ({ doStream, params }) => {
+      const cacheInput = getCacheKey(currentOptions);
+      const scope = buildScope(currentOptions);
       const promptScope = Object.values(scope).join("|");
-      const { cached, embedding, promptNorm } = await checkCache(
+
+      const { cached, embedding, promptNorm } = await checkSemanticCache(
         cacheInput,
         scope,
       );
 
       if (cached && cacheMode !== "refresh") {
-        if (debug) console.log("✅ Cache hit - returning from cache");
+        if (debug) console.log("✅ Returning cached stream");
 
-        let chunks: any[] = [];
+        let chunks: LanguageModelV2StreamPart[] = [];
 
-        if (cached.streamParts && simulateStream.enabled) {
-          const formattedChunks = cached.streamParts.map((p: any) => {
+        if (cached.streamParts) {
+          chunks = cached.streamParts.map((p: any) => {
             if (p.type === "response-metadata" && p.timestamp) {
               return { ...p, timestamp: new Date(p.timestamp) };
             }
             return p;
           });
-
-          chunks = formattedChunks;
         } else if (cached.text) {
           chunks = [
-            { type: "start" },
-            { type: "text-delta", textDelta: cached.text },
-            { type: "finish", finishReason: "stop" },
+            { type: "text-start", id: cached.id },
+            { type: "text-delta", delta: cached.text, id: cached.id },
+            { type: "finish", finishReason: "stop", usage: cached.usage },
           ];
-        } else {
-          return streamText(options);
         }
 
-        const stream = simulateReadableStream({
-          initialDelayInMs: simulateStream.initialDelayInMs,
-          chunkDelayInMs: simulateStream.chunkDelayInMs,
-          chunks,
-        });
-
-        return stream;
+        return {
+          stream: simulateReadableStream({
+            initialDelayInMs: simulateStream.enabled
+              ? simulateStream.initialDelayInMs
+              : 0,
+            chunkDelayInMs: simulateStream.enabled
+              ? simulateStream.chunkDelayInMs
+              : 0,
+            chunks,
+          }),
+        };
       }
 
-      if (debug) console.log("❌ Cache miss - generating new response");
+      const { stream, ...rest } = await doStream();
 
-      const capturedParts: any[] = [];
+      const fullResponse: LanguageModelV2StreamPart[] = [];
 
-      const streamResult = streamText({
-        ...options,
-        experimental_transform: () =>
-          new TransformStream({
-            transform(chunk, controller) {
-              capturedParts.push(chunk);
-              controller.enqueue(chunk);
-            },
-          }),
+      const transformStream = new TransformStream<
+        LanguageModelV2StreamPart,
+        LanguageModelV2StreamPart
+      >({
+        transform(chunk, controller) {
+          fullResponse.push(chunk);
+          controller.enqueue(chunk);
+        },
+        async flush() {
+          const id = "llm:" + sha(promptScope + "|" + promptNorm);
+          await storeInCache(
+            id,
+            { streamParts: fullResponse },
+            embedding,
+            promptNorm,
+            scope,
+          );
+        },
       });
 
-      (async () => {
-        const finalText = await streamResult.text;
-        const id = "llm:" + sha(promptScope + "|" + promptNorm);
-        await storeInCache(
-          id,
-          { streamParts: capturedParts, text: finalText },
-          embedding,
-          promptNorm,
-          scope,
-        );
-      })();
+      return {
+        stream: stream.pipeThrough(transformStream),
+        ...rest,
+      };
+    },
 
-      return streamResult;
+    wrapGenerate: async ({ doGenerate, params }) => {
+      const cacheInput = getCacheKey(currentOptions);
+      const scope = buildScope(currentOptions);
+      const promptScope = Object.values(scope).join("|");
+
+      const { cached, embedding, promptNorm } = await checkSemanticCache(
+        cacheInput,
+        scope,
+      );
+
+      if (cached && cacheMode !== "refresh") {
+        if (debug) console.log("✅ Returning cached generation");
+
+        if (cached?.response?.timestamp) {
+          cached.response.timestamp = new Date(cached.response.timestamp);
+        }
+
+        type GenReturn<T> = T extends () => PromiseLike<infer R> ? R : never;
+        return cached as unknown as GenReturn<typeof doGenerate>;
+      }
+
+      const result = await doGenerate();
+
+      const id = "llm:" + sha(promptScope + "|" + promptNorm);
+      await storeInCache(id, result, embedding, promptNorm, scope);
+
+      return result;
+    },
+  };
+
+  return {
+    streamText: async <TOOLS extends Record<string, any> = {}>(
+      options: Parameters<typeof streamText<TOOLS>>[0],
+    ): Promise<StreamTextResult<TOOLS, any>> => {
+      const wrappedModel = wrapLanguageModel({
+        model:
+          typeof options.model === "string"
+            ? gateway(options.model)
+            : options.model,
+        middleware: semanticCacheMiddleware,
+      });
+
+      return streamText({
+        ...options,
+        model: wrappedModel,
+      });
     },
 
     generateText: async <
@@ -255,146 +313,52 @@ export function createSemanticCache(config: SemanticCacheConfig) {
     >(
       options: Parameters<typeof generateText<TOOLS, OUTPUT>>[0],
     ): Promise<GenerateTextResult<TOOLS, OUTPUT>> => {
-      const cacheInput = getCacheKey(options);
-      const scope = buildScope(options);
-      const promptScope = Object.values(scope).join("|");
-      const { cached, embedding, promptNorm } = await checkCache(
-        cacheInput,
-        scope,
-      );
+      const wrappedModel = wrapLanguageModel({
+        model:
+          typeof options.model === "string"
+            ? gateway(options.model)
+            : options.model,
+        middleware: semanticCacheMiddleware,
+      });
 
-      if (cached && cacheMode !== "refresh") {
-        return cached as GenerateTextResult<TOOLS, OUTPUT>;
-      }
-
-      const result = await generateText(options);
-      const id = "llm:" + sha(promptScope + "|" + promptNorm);
-      await storeInCache(id, result, embedding, promptNorm, scope);
-
-      return result;
+      return generateText({
+        ...options,
+        model: wrappedModel,
+      });
     },
 
     generateObject: async <T = any>(
       options: Parameters<typeof generateObject>[0],
     ): Promise<GenerateObjectResult<T>> => {
-      const cacheInput = getCacheKey(options);
-      const scope = buildScope(options);
-      const promptScope = Object.values(scope).join("|");
-      const { cached, embedding, promptNorm } = await checkCache(
-        cacheInput,
-        scope,
-      );
+      const wrappedModel = wrapLanguageModel({
+        model:
+          typeof options.model === "string"
+            ? gateway(options.model)
+            : options.model,
+        middleware: semanticCacheMiddleware,
+      });
 
-      if (cached && cacheMode !== "refresh") {
-        return cached as GenerateObjectResult<T>;
-      }
-
-      const result = await generateObject(options);
-      const id = "llm:" + sha(promptScope + "|" + promptNorm);
-      await storeInCache(id, result, embedding, promptNorm, scope);
-
-      return result as GenerateObjectResult<T>;
+      return (await generateObject({
+        ...options,
+        model: wrappedModel,
+      })) as GenerateObjectResult<T>;
     },
 
     streamObject: async <T = any>(
       options: Parameters<typeof streamObject>[0],
     ): Promise<StreamObjectResult<T, T, any>> => {
-      const cacheInput = getCacheKey(options);
-      const scope = buildScope(options);
-      const promptScope = Object.values(scope).join("|");
-      const { cached, embedding, promptNorm } = await checkCache(
-        cacheInput,
-        scope,
-      );
+      const wrappedModel = wrapLanguageModel({
+        model:
+          typeof options.model === "string"
+            ? gateway(options.model)
+            : options.model,
+        middleware: semanticCacheMiddleware,
+      });
 
-      // Check cache only if not in refresh mode
-      if (cached && cacheMode !== "refresh") {
-        if (debug) console.log("✅ Cache hit - returning from cache");
-
-        // Create transform stream from cached data
-        let sourceStream: ReadableStream;
-
-        if (cached.streamParts && simulateStream.enabled) {
-          const formattedChunks = cached.streamParts.map((p: any) => {
-            if (p.type === "response-metadata" && p.timestamp) {
-              return { ...p, timestamp: new Date(p.timestamp) };
-            }
-            return p;
-          });
-
-          sourceStream = simulateReadableStream({
-            initialDelayInMs: simulateStream.initialDelayInMs,
-            chunkDelayInMs: simulateStream.chunkDelayInMs,
-            chunks: formattedChunks,
-          });
-        } else if (cached.streamParts) {
-          sourceStream = simulateReadableStream({
-            initialDelayInMs: 0,
-            chunkDelayInMs: 0,
-            chunks: cached.streamParts,
-          });
-        } else {
-          // No cached data, proceed normally
-          return streamObject(options) as unknown as StreamObjectResult<
-            T,
-            T,
-            any
-          >;
-        }
-
-        const transformStream = new TransformStream({
-          start(controller) {
-            // Pipe source stream through
-            const reader = sourceStream.getReader();
-            (async () => {
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  controller.enqueue(value);
-                }
-                controller.terminate();
-              } catch (err) {
-                controller.error(err);
-              }
-            })();
-          },
-        });
-
-        // Return streamObject with the transform
-        return streamObject({
-          ...options,
-          experimental_transform: () => transformStream,
-        } as any) as unknown as StreamObjectResult<T, T, any>;
-      }
-
-      if (debug) console.log("❌ Cache miss - generating new object stream");
-
-      const capturedParts: any[] = [];
-
-      const streamResult = streamObject({
+      return streamObject({
         ...options,
-        experimental_transform: () =>
-          new TransformStream({
-            transform(chunk, controller) {
-              capturedParts.push(chunk);
-              controller.enqueue(chunk);
-            },
-          }),
-      } as any);
-
-      (async () => {
-        const id = "llm:" + sha(promptScope + "|" + promptNorm);
-        await storeInCache(
-          id,
-          { streamParts: capturedParts },
-          embedding,
-          promptNorm,
-          scope,
-        );
-      })();
-
-      return streamResult as unknown as StreamObjectResult<T, T, any>;
+        model: wrappedModel,
+      }) as unknown as StreamObjectResult<T, T, any>;
     },
   };
 }

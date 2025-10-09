@@ -1,0 +1,17 @@
+version: "3"
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: local-redis
+    ports:
+      - "6379:6379"
+
+  serverless-redis-http:
+    image: hiett/serverless-redis-http:latest
+    container_name: redis-http
+    ports:
+      - "8079:80"
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: u9pLNM76QVabwia3u_51FBFM23-DVsl2dgbk_tlunWVjI0tHJSJ0TS6FKv_ao2UxkazRZgeezc4G_ugE4by6dxAPyqykJzQ-3RokK2F16Hf9eNg
+      SRH_CONNECTION_STRING: "redis://redis:6379"

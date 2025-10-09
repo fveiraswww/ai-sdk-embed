@@ -20,6 +20,9 @@ importers:
 
   apps/ai-sdk-embed:
     dependencies:
+      '@ai-sdk/provider':
+        specifier: ^2.0.0
+        version: 2.0.0
       '@upstash/redis':
         specifier: ^1.35.5
         version: 1.35.5
