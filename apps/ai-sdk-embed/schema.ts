@@ -33,7 +33,7 @@ export const semanticCacheConfigSchema = z.object({
     .number()
     .positive()
     .optional()
-    .default(60 * 60 * 24 * 14), // 14 days
+    .default(60 * 60 * 24 * 14),
   debug: z.boolean().optional().default(false),
   cacheMode: z.enum(["default", "refresh"]).optional().default("default"),
   simulateStream: z

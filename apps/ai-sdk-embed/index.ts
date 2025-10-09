@@ -177,7 +177,7 @@ export function createSemanticCache(config: SemanticCacheConfig) {
   return {
     streamText: async <TOOLS extends Record<string, any> = {}>(
       options: Parameters<typeof streamText<TOOLS>>[0],
-    ): Promise<StreamTextResult<TOOLS, any>> => {
+    ): Promise<StreamTextResult<TOOLS, any> | ReadableStream<any>> => {
       const cacheInput = getCacheKey(options);
       const scope = buildScope(options);
       const promptScope = Object.values(scope).join("|");
@@ -189,7 +189,7 @@ export function createSemanticCache(config: SemanticCacheConfig) {
       if (cached && cacheMode !== "refresh") {
         if (debug) console.log("✅ Cache hit - returning from cache");
 
-        let sourceStream: ReadableStream;
+        let chunks: any[] = [];
 
         if (cached.streamParts && simulateStream.enabled) {
           const formattedChunks = cached.streamParts.map((p: any) => {
@@ -199,55 +199,24 @@ export function createSemanticCache(config: SemanticCacheConfig) {
             return p;
           });
 
-          sourceStream = simulateReadableStream({
-            initialDelayInMs: simulateStream.initialDelayInMs,
-            chunkDelayInMs: simulateStream.chunkDelayInMs,
-            chunks: formattedChunks,
-          });
-        } else if (cached.streamParts) {
-          sourceStream = simulateReadableStream({
-            initialDelayInMs: 0,
-            chunkDelayInMs: 0,
-            chunks: cached.streamParts,
-          });
+          chunks = formattedChunks;
         } else if (cached.text) {
-          sourceStream = new ReadableStream({
-            async start(controller) {
-              controller.enqueue({
-                type: "text-delta",
-                textDelta: cached.text,
-              });
-              controller.close();
-            },
-          });
+          chunks = [
+            { type: "start" },
+            { type: "text-delta", textDelta: cached.text },
+            { type: "finish", finishReason: "stop" },
+          ];
         } else {
           return streamText(options);
         }
 
-        const transformStream = new TransformStream({
-          start(controller) {
-            // Pipe source stream through
-            const reader = sourceStream.getReader();
-            (async () => {
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  controller.enqueue(value);
-                }
-                controller.terminate();
-              } catch (err) {
-                controller.error(err);
-              }
-            })();
-          },
+        const stream = simulateReadableStream({
+          initialDelayInMs: simulateStream.initialDelayInMs,
+          chunkDelayInMs: simulateStream.chunkDelayInMs,
+          chunks,
         });
 
-        // Return streamText with the transform
-        return streamText({
-          ...options,
-          experimental_transform: () => transformStream,
-        } as any);
+        return stream;
       }
 
       if (debug) console.log("❌ Cache miss - generating new response");

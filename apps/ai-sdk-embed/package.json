@@ -47,11 +47,12 @@
   "homepage": "https://github.com/yourusername/ai-sdk-embed#readme",
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/node": "^24.7.0",
     "tsup": "^8.5.0",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "ai": "^5.0.60"
+    "ai": "^5.0.0"
   },
   "dependencies": {
     "@upstash/redis": "^1.35.5",
