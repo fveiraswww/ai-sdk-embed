@@ -3,7 +3,7 @@ import { readChat, saveChat } from "@util/chat-store";
 import { convertToModelMessages, gateway, generateId, streamText } from "ai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
-import { createSemanticCache } from "ai-sdk-memory";
+import { createSemanticMemory } from "ai-sdk-memory";
 
 export async function POST(req: Request) {
   const {
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
   const userStopSignal = new AbortController();
 
-  const semantic = createSemanticCache({
+  const semantic = createSemanticMemory({
     model: "text-embedding-3-small",
     debug: true,
   });
