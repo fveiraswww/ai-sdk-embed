@@ -2,6 +2,7 @@ import {
   type LanguageModelV2Middleware,
   type LanguageModelV2StreamPart,
   type LanguageModelV2Content,
+  type LanguageModelV2CallOptions,
 } from "@ai-sdk/provider";
 import {
   embed,
@@ -183,12 +184,10 @@ export function createSemanticCache(config: SemanticCacheConfig) {
     }
   }
 
-  let currentOptions: any = {};
-
   const semanticCacheMiddleware: LanguageModelV2Middleware = {
     wrapStream: async ({ doStream, params }) => {
-      const cacheInput = getCacheKey(currentOptions);
-      const scope = buildScope(currentOptions);
+      const cacheInput = getCacheKey(params);
+      const scope = buildScope(params);
       const promptScope = Object.values(scope).join("|");
 
       const { cached, embedding, promptNorm } = await checkSemanticCache(
@@ -260,8 +259,8 @@ export function createSemanticCache(config: SemanticCacheConfig) {
     },
 
     wrapGenerate: async ({ doGenerate, params }) => {
-      const cacheInput = getCacheKey(currentOptions);
-      const scope = buildScope(currentOptions);
+      const cacheInput = getCacheKey(params);
+      const scope = buildScope(params);
       const promptScope = Object.values(scope).join("|");
 
       const { cached, embedding, promptNorm } = await checkSemanticCache(
