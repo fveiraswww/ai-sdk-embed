@@ -1,6 +1,6 @@
 {
-  "name": "ai-sdk-embed",
-  "version": "0.0.4",
+  "name": "ai-sdk-memory",
+  "version": "0.0.1",
   "description": "Semantic caching layer for AI SDK. Automatically generates embeddings for prompts, stores them in Upstash Vector and Redis, and reuses semantically similar responses to reduce token costs.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -39,12 +39,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/ai-sdk-embed.git"
+    "url": "https://github.com/yourusername/ai-sdk-memory.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/ai-sdk-embed/issues"
+    "url": "https://github.com/yourusername/ai-sdk-memory/issues"
   },
-  "homepage": "https://github.com/yourusername/ai-sdk-embed#readme",
+  "homepage": "https://github.com/yourusername/ai-sdk-memory#readme",
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^24.7.0",

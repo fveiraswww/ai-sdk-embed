@@ -1,5 +1,5 @@
 {
-  "name": "ai-sdk-embedding",
+  "name": "ai-sdk-memoryding",
   "private": true,
   "scripts": {
     "build": "turbo run build",

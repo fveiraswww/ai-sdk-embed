@@ -3,7 +3,7 @@ import { readChat, saveChat } from "@util/chat-store";
 import { convertToModelMessages, gateway, generateId, streamText } from "ai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
-import { createSemanticCache } from "ai-sdk-embed";
+import { createSemanticCache } from "ai-sdk-memory";
 
 export async function POST(req: Request) {
   const {
