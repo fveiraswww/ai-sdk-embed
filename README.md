@@ -1,6 +1,6 @@
   # ai-sdk-memory
 
-  **Semantic caching for AI SDK**
+  **Semantic and conversational memory for Vercel AI SDK**
 
   Embeddings turn text into numeric vectors that represent meaning.
   Similar prompts have similar vectors.
