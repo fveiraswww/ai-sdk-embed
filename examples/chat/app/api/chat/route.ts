@@ -3,7 +3,7 @@ import { readChat, saveChat } from "@util/chat-store";
 import { convertToModelMessages, gateway, generateId, streamText } from "ai";
 import { after } from "next/server";
 import { createResumableStreamContext } from "resumable-stream";
-import { createSemanticMemory } from "ai-sdk-memory";
+import { createIntentMemory, createSemanticMemory } from "ai-sdk-memory";
 
 export async function POST(req: Request) {
   const {
@@ -62,7 +62,21 @@ export async function POST(req: Request) {
     debug: true,
   });
 
-  const result = await semantic.streamText({
+  const intent = createIntentMemory({
+    intentExtractor: {
+      model: "openai/gpt-5-nano",
+    },
+    model: "text-embedding-3-small",
+    debug: true,
+    threshold: 0.95,
+    onStepFinish: ({ userIntention, cacheScore, step }) => {
+      console.log("score", cacheScore);
+      console.log("step", step);
+      console.log("user intention");
+    },
+  });
+
+  const result = await intent.streamText({
     model: gateway("openai/gpt-5"),
     messages: convertToModelMessages(messages),
     abortSignal: userStopSignal.signal,

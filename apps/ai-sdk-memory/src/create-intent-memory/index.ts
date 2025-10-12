@@ -2,6 +2,7 @@ import {
   type LanguageModelV2Middleware,
   type LanguageModelV2StreamPart,
   type LanguageModelV2Content,
+  type LanguageModelV2CallOptions,
 } from "@ai-sdk/provider";
 import {
   embed,
@@ -67,6 +68,7 @@ export function createIntentMemory(config: IntentCacheConfig) {
     debug,
     cacheMode,
     intentExtractor,
+    onStepFinish,
   } = parsed;
   const embeddingModel = parsed.model as EmbeddingModel<string>;
 
@@ -84,6 +86,10 @@ export function createIntentMemory(config: IntentCacheConfig) {
     messages: any[],
     extractorModel: any,
   ): Promise<ExtractedIntent> {
+    onStepFinish?.({
+      step: "intent-extraction-start",
+    });
+
     // Take last N messages based on windowSize
     const windowSize = intentExtractor?.windowSize ?? 5;
     const recentMessages = messages.slice(-windowSize);
@@ -130,6 +136,12 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
         console.log("🎯 Extracted intent:", extracted);
       }
 
+      onStepFinish?.({
+        step: "intent-extraction-complete",
+        extractedIntent: extracted,
+        userIntention: buildIntentString(extracted),
+      });
+
       return extracted;
     } catch (error) {
       if (debug) {
@@ -138,6 +150,11 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
           error,
         );
       }
+
+      onStepFinish?.({
+        step: "intent-extraction-error",
+        error,
+      });
 
       // Fallback: use last message
       const lastMessage = messages[messages.length - 1];
@@ -167,14 +184,16 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
     return parts.join(" ");
   }
 
-  async function getCacheKeyFromIntent(options: any): Promise<{
+  async function getCacheKeyFromIntent(
+    options: LanguageModelV2CallOptions,
+  ): Promise<{
     intentString: string;
     extractedIntent: ExtractedIntent | null;
   }> {
     if (
-      !options.messages ||
-      !Array.isArray(options.messages) ||
-      options.messages.length === 0
+      !options.prompt ||
+      !Array.isArray(options.prompt) ||
+      options.prompt.length === 0
     ) {
       if (options.prompt) {
         return {
@@ -196,13 +215,19 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
       );
     }
 
-    const extracted = await extractIntent(options.messages, extractorModel);
+    const extracted = await extractIntent(options.prompt, extractorModel);
+
     const intentString = buildIntentString(extracted);
 
     return { intentString, extractedIntent: extracted };
   }
 
   async function checkIntentCache(intentString: string, scope: any) {
+    onStepFinish?.({
+      step: "cache-check-start",
+      userIntention: intentString,
+    });
+
     const intentNorm = norm(intentString);
 
     const { embedding } = await embed({
@@ -217,6 +242,13 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
     });
 
     const hit = result.find((m) => {
+      if (debug) console.log("intent score", m.score.toFixed(3));
+
+      onStepFinish?.({
+        step: "cache-check-start",
+        cacheScore: m.score,
+      });
+
       if (m.score < threshold) return false;
 
       const metadata = m.metadata as any;
@@ -240,11 +272,24 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
 
       if (cached) {
         if (debug) console.log("✅ intent cache hit", hit.score.toFixed(3));
+
+        onStepFinish?.({
+          step: "cache-hit",
+          userIntention: intentString,
+          cacheScore: hit.score,
+        });
+
         return { cached, embedding, intentNorm };
       }
     }
 
     if (debug) console.log("❌ miss -> generating…");
+
+    onStepFinish?.({
+      step: "cache-miss",
+      userIntention: intentString,
+    });
+
     return { cached: null, embedding, intentNorm };
   }
 
@@ -256,6 +301,11 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
     scope: any,
     extractedIntent: ExtractedIntent | null,
   ) {
+    onStepFinish?.({
+      step: "cache-store-start",
+      userIntention: intentNorm,
+    });
+
     const lockKey = "lock:" + id;
     const ok = await redis.set(lockKey, "1", { nx: true, ex: 15 });
 
@@ -282,6 +332,18 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
           },
         },
       ]);
+
+      onStepFinish?.({
+        step: "cache-store-complete",
+        userIntention: intentNorm,
+      });
+    } catch (error) {
+      onStepFinish?.({
+        step: "cache-store-error",
+        userIntention: intentNorm,
+        error,
+      });
+      throw error;
     } finally {
       await redis.del(lockKey);
     }
@@ -293,6 +355,8 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
         await getCacheKeyFromIntent(params);
       const scope = buildScope(params);
       const promptScope = Object.values(scope).join("|");
+
+      if (debug) console.log("User intention:", JSON.stringify(intentString));
 
       const { cached, embedding, intentNorm } = await checkIntentCache(
         intentString,
@@ -332,6 +396,11 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
         };
       }
 
+      onStepFinish?.({
+        step: "generation-start",
+        userIntention: intentString,
+      });
+
       const { stream, ...rest } = await doStream();
 
       const fullResponse: LanguageModelV2StreamPart[] = [];
@@ -345,6 +414,11 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
           controller.enqueue(chunk);
         },
         async flush() {
+          onStepFinish?.({
+            step: "generation-complete",
+            userIntention: intentString,
+          });
+
           const id = "intent:" + sha(promptScope + "|" + intentNorm);
           await storeInCache(
             id,
@@ -385,7 +459,17 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
         return cached as unknown as GenReturn<typeof doGenerate>;
       }
 
+      onStepFinish?.({
+        step: "generation-start",
+        userIntention: intentString,
+      });
+
       const result = await doGenerate();
+
+      onStepFinish?.({
+        step: "generation-complete",
+        userIntention: intentString,
+      });
 
       const id = "intent:" + sha(promptScope + "|" + intentNorm);
       await storeInCache(

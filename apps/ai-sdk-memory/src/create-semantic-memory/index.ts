@@ -2,6 +2,8 @@ import {
   type LanguageModelV2Middleware,
   type LanguageModelV2StreamPart,
   type LanguageModelV2Content,
+  type LanguageModelV2CallOptions,
+  type LanguageModelV2Prompt,
 } from "@ai-sdk/provider";
 import {
   embed,
@@ -80,9 +82,9 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
     token: redisConfig.token as string,
   });
 
-  function getCacheKey(options: any): string {
-    if (options.messages) {
-      const messages = Array.isArray(options.messages) ? options.messages : [];
+  function getCacheKey(options: LanguageModelV2CallOptions): string {
+    if (options.prompt) {
+      const messages = Array.isArray(options.prompt) ? options.prompt : [];
 
       // By default, use only the last message to avoid token limit issues
       if (!useFullMessages && messages.length > 0) {
@@ -96,7 +98,7 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
         });
       }
 
-      return JSON.stringify(canonicalizeMessages(options.messages));
+      return JSON.stringify(canonicalizeMessages(options.prompt));
     }
     if (options.prompt) {
       return String(options.prompt);

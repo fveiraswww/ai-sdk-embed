@@ -1,7 +1,7 @@
 {
   "name": "ai-sdk-memory",
-  "version": "0.0.2",
-  "description": "Semantic caching layer for AI SDK. Automatically generates embeddings for prompts, stores them in Upstash Vector and Redis, and reuses semantically similar responses to reduce token costs.",
+  "version": "0.0.3",
+  "description": "Semantic and intent-based memory for AI SDK. Supports one-shot semantic caching and multi-turn intent-aware conversations. Reduces token costs by reusing similar responses.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

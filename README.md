@@ -1,10 +1,15 @@
   # ai-sdk-memory
 
-  **Semantic and conversational memory for Vercel AI SDK**
+  **Semantic and intent-based memory for Vercel AI SDK**
 
   Embeddings turn text into numeric vectors that represent meaning.
   Similar prompts have similar vectors.
   `ai-sdk-memory` uses that idea to **avoid paying tokens twice for similar questions**.
+
+  ## Two Memory Types
+
+  - **`createSemanticMemory`** — For one-shot conversations: FAQs, docs, single queries
+  - **`createIntentMemory`** — For multi-turn conversations with context and intent understanding
 
   ![vid_gvkx2xdbbcm1-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/e3c75f7b-e461-4dc3-9a37-a9df8dfe217a)
 
@@ -14,11 +19,15 @@
   ```
 
   ## Usage
-  #### Streaming Text
-  ```ts
-  import { createSemanticCache } from "ai-sdk-memory";
 
-  const semantic = createSemanticCache({
+  ### createSemanticMemory
+
+  **For one-shot conversations:** FAQs, docs, single queries
+
+  ```ts
+  import { createSemanticMemory } from "ai-sdk-memory";
+
+  const semantic = createSemanticMemory({
     model: "text-embedding-3-small",
   });
 
@@ -28,17 +37,34 @@
   });
   ```
 
-  #### Generating Structured Data
-  ```ts
-  import { createSemanticCache } from "ai-sdk-memory";
+  ---
 
-  const semantic = createSemanticCache({
+  ### createIntentMemory
+
+  **For multi-turn conversations:** Chatbots, contextual assistants, complex interactions
+
+  ```ts
+  import { createIntentMemory } from "ai-sdk-memory";
+
+  const intent = createIntentMemory({
+    intentExtractor: {
+      model: "openai/gpt-5-mini",
+      windowSize: 5,
+    },
     model: "text-embedding-3-small",
+    threshold: 0.95,
+    onStepFinish: ({ step, userIntention, cacheScore }) => {
+      console.log(step, userIntention, cacheScore);
+    },
   });
 
-  const result = await semantic.generateText({
+  const result = await intent.streamText({
     model: "openai/gpt-5-mini",
-    messages: [{ role: "user", content: "What is an agent?" }],
+    messages: [
+      { role: "user", content: "I need help with React" },
+      { role: "assistant", content: "What issue are you facing?" },
+      { role: "user", content: "Components re-rendering too often" },
+    ],
   });
   ```
 
