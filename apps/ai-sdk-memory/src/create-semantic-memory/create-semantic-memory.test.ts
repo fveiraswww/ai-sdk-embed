@@ -305,7 +305,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.95,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "hash123",
             params: "params123",
             toolsHash: "tools123",
@@ -329,7 +329,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.85,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "hash123",
             params: "params123",
             toolsHash: "tools123",
@@ -369,7 +369,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.95,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "hash123",
             params: "params123",
             toolsHash: "tools123",
@@ -389,7 +389,7 @@ describe("createSemanticMemory", () => {
           id: "test-id-1",
           score: 0.88,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "h1",
             params: "p1",
             toolsHash: "t1",
@@ -399,7 +399,7 @@ describe("createSemanticMemory", () => {
           id: "test-id-2",
           score: 0.94,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "h2",
             params: "p2",
             toolsHash: "t2",
@@ -409,7 +409,7 @@ describe("createSemanticMemory", () => {
           id: "test-id-3",
           score: 0.91,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "h3",
             params: "p3",
             toolsHash: "t3",
@@ -739,7 +739,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.95,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "system-abc",
             params: "params-xyz",
             toolsHash: "tools-123",
@@ -775,7 +775,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.95,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "different-system",
             params: "params-xyz",
             toolsHash: "tools-123",
@@ -793,7 +793,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.95,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "system-abc",
             params: "different-params",
             toolsHash: "tools-123",
@@ -811,7 +811,7 @@ describe("createSemanticMemory", () => {
           id: "test-id",
           score: 0.95,
           metadata: {
-            llmModel: "gpt-4",
+            llmModel: "openai/gpt-5-nano",
             systemHash: "system-abc",
             params: "params-xyz",
             toolsHash: "different-tools",

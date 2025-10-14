@@ -151,17 +151,18 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
         );
       }
 
-      onStepFinish?.({
-        step: "intent-extraction-error",
-        error,
-      });
-
       // Fallback: use last message
       const lastMessage = messages[messages.length - 1];
       const content =
         typeof lastMessage.content === "string"
           ? lastMessage.content
           : JSON.stringify(lastMessage.content);
+
+      onStepFinish?.({
+        step: "intent-extraction-error",
+        userIntention: content,
+        error,
+      });
 
       return {
         intent: content,
@@ -241,11 +242,14 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
       includeMetadata: true,
     });
 
+    let bestScore = result.length > 0 ? result[0].score : 0;
+
     const hit = result.find((m) => {
       if (debug) console.log("intent score", m.score.toFixed(3));
 
       onStepFinish?.({
-        step: "cache-check-start",
+        step: "cache-score-evaluated",
+        userIntention: intentString,
         cacheScore: m.score,
       });
 
@@ -288,6 +292,7 @@ Extract and return ONLY a JSON object with this exact structure (no markdown, no
     onStepFinish?.({
       step: "cache-miss",
       userIntention: intentString,
+      cacheScore: bestScore,
     });
 
     return { cached: null, embedding, intentNorm };

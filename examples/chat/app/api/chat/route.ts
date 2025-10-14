@@ -65,6 +65,7 @@ export async function POST(req: Request) {
   const intent = createIntentMemory({
     intentExtractor: {
       model: "openai/gpt-5-nano",
+      windowSize: 5,
     },
     model: "text-embedding-3-small",
     debug: true,

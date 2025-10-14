@@ -1,6 +1,6 @@
 {
   "name": "ai-sdk-memory",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Semantic and intent-based memory for AI SDK. Supports one-shot semantic caching and multi-turn intent-aware conversations. Reduces token costs by reusing similar responses.",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -39,12 +39,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/ai-sdk-memory.git"
+    "url": "https://github.com/fveiraswww/ai-sdk-memory.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/ai-sdk-memory/issues"
+    "url": "https://github.com/fveiraswww/ai-sdk-memory/issues"
   },
-  "homepage": "https://github.com/yourusername/ai-sdk-memory#readme",
+  "homepage": "https://github.com/fveiraswww/ai-sdk-memory#readme",
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^24.7.0",

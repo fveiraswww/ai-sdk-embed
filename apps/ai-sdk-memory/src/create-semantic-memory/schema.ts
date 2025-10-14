@@ -49,6 +49,29 @@ export const semanticCacheConfigSchema = z.object({
       chunkDelayInMs: 10,
     }),
   useFullMessages: z.boolean().optional().default(false),
+  onStepFinish: z
+    .function({
+      input: [
+        z.object({
+          step: z.enum([
+            "cache-check-start",
+            "cache-score-evaluated",
+            "cache-hit",
+            "cache-miss",
+            "generation-start",
+            "generation-complete",
+            "cache-store-start",
+            "cache-store-complete",
+            "cache-store-error",
+          ]),
+          prompt: z.string().optional(),
+          cacheScore: z.number().optional(),
+          error: z.any().optional(),
+        }),
+      ],
+      output: z.void(),
+    })
+    .optional(),
 });
 
 export type SemanticCacheConfig = z.input<typeof semanticCacheConfigSchema>;

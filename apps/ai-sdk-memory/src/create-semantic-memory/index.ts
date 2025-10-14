@@ -69,6 +69,7 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
     debug,
     cacheMode,
     useFullMessages,
+    onStepFinish,
   } = parsed;
   const model = parsed.model as EmbeddingModel<string>;
 
@@ -107,6 +108,11 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
   }
 
   async function checkSemanticCache(cacheInput: string, scope: any) {
+    onStepFinish?.({
+      step: "cache-check-start",
+      prompt: cacheInput,
+    });
+
     const promptNorm = norm(cacheInput);
 
     const { embedding } = await embed({
@@ -120,7 +126,17 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
       includeMetadata: true,
     });
 
+    let bestScore = result.length > 0 ? result[0].score : 0;
+
     const hit = result.find((m) => {
+      if (debug) console.log("semantic score", m.score.toFixed(3));
+
+      onStepFinish?.({
+        step: "cache-score-evaluated",
+        prompt: cacheInput,
+        cacheScore: m.score,
+      });
+
       if (m.score < threshold) return false;
 
       const metadata = m.metadata as any;
@@ -144,11 +160,25 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
 
       if (cached) {
         if (debug) console.log("✅ cache hit", hit.score.toFixed(3));
+
+        onStepFinish?.({
+          step: "cache-hit",
+          prompt: cacheInput,
+          cacheScore: hit.score,
+        });
+
         return { cached, embedding, promptNorm };
       }
     }
 
     if (debug) console.log("❌ miss -> generating…");
+
+    onStepFinish?.({
+      step: "cache-miss",
+      prompt: cacheInput,
+      cacheScore: bestScore,
+    });
+
     return { cached: null, embedding, promptNorm };
   }
 
@@ -159,6 +189,11 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
     promptNorm: string,
     scope: any,
   ) {
+    onStepFinish?.({
+      step: "cache-store-start",
+      prompt: promptNorm,
+    });
+
     const lockKey = "lock:" + id;
     const ok = await redis.set(lockKey, "1", { nx: true, ex: 15 });
 
@@ -180,6 +215,18 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
           },
         },
       ]);
+
+      onStepFinish?.({
+        step: "cache-store-complete",
+        prompt: promptNorm,
+      });
+    } catch (error) {
+      onStepFinish?.({
+        step: "cache-store-error",
+        prompt: promptNorm,
+        error,
+      });
+      throw error;
     } finally {
       await redis.del(lockKey);
     }
@@ -229,6 +276,11 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
         };
       }
 
+      onStepFinish?.({
+        step: "generation-start",
+        prompt: cacheInput,
+      });
+
       const { stream, ...rest } = await doStream();
 
       const fullResponse: LanguageModelV2StreamPart[] = [];
@@ -242,6 +294,11 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
           controller.enqueue(chunk);
         },
         async flush() {
+          onStepFinish?.({
+            step: "generation-complete",
+            prompt: cacheInput,
+          });
+
           const id = "llm:" + sha(promptScope + "|" + promptNorm);
           await storeInCache(
             id,
@@ -280,7 +337,17 @@ export function createSemanticMemory(config: SemanticCacheConfig) {
         return cached as unknown as GenReturn<typeof doGenerate>;
       }
 
+      onStepFinish?.({
+        step: "generation-start",
+        prompt: cacheInput,
+      });
+
       const result = await doGenerate();
+
+      onStepFinish?.({
+        step: "generation-complete",
+        prompt: cacheInput,
+      });
 
       const id = "llm:" + sha(promptScope + "|" + promptNorm);
       await storeInCache(id, result, embedding, promptNorm, scope);
