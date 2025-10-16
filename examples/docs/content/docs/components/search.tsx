@@ -1,5 +1,5 @@
-'use client';
-import { RemoveScroll } from 'react-remove-scroll';
+"use client";
+import { RemoveScroll } from "react-remove-scroll";
 import {
   type ComponentProps,
   createContext,
@@ -9,17 +9,17 @@ import {
   useMemo,
   useRef,
   useState,
-} from 'react';
-import { Loader2, RefreshCw, SearchIcon, Send, X } from 'lucide-react';
-import { cn } from '../lib/cn';
-import { buttonVariants } from './ui/button';
-import Link from 'fumadocs-core/link';
-import { type UIMessage, useChat, type UseChatHelpers } from '@ai-sdk/react';
-import type { ProvideLinksToolSchema } from '../lib/inkeep-qa-schema';
-import type { z } from 'zod';
-import { DefaultChatTransport } from 'ai';
-import { Markdown } from './markdown';
-import { Presence } from '@radix-ui/react-presence';
+} from "react";
+import { Loader2, RefreshCw, SearchIcon, Send, X } from "lucide-react";
+import { cn } from "../lib/cn";
+import { buttonVariants } from "./ui/button";
+import Link from "fumadocs-core/link";
+import { type UIMessage, useChat, type UseChatHelpers } from "@ai-sdk/react";
+import type { ProvideLinksToolSchema } from "@/lib/inkeep-qa-schema";
+import type { z } from "zod";
+import { DefaultChatTransport } from "ai";
+import { Markdown } from "./markdown";
+import { Presence } from "@radix-ui/react-presence";
 
 const Context = createContext<{
   open: boolean;
@@ -33,20 +33,20 @@ function useChatContext() {
 
 function SearchAIActions() {
   const { messages, status, setMessages, regenerate } = useChatContext();
-  const isLoading = status === 'streaming';
+  const isLoading = status === "streaming";
 
   if (messages.length === 0) return null;
 
   return (
     <>
-      {!isLoading && messages.at(-1)?.role === 'assistant' && (
+      {!isLoading && messages.at(-1)?.role === "assistant" && (
         <button
           type="button"
           className={cn(
             buttonVariants({
-              color: 'secondary',
-              size: 'sm',
-              className: 'rounded-full gap-1.5',
+              color: "secondary",
+              size: "sm",
+              className: "rounded-full gap-1.5",
             }),
           )}
           onClick={() => regenerate()}
@@ -59,9 +59,9 @@ function SearchAIActions() {
         type="button"
         className={cn(
           buttonVariants({
-            color: 'secondary',
-            size: 'sm',
-            className: 'rounded-full',
+            color: "secondary",
+            size: "sm",
+            className: "rounded-full",
           }),
         )}
         onClick={() => setMessages([])}
@@ -72,37 +72,37 @@ function SearchAIActions() {
   );
 }
 
-function SearchAIInput(props: ComponentProps<'form'>) {
+function SearchAIInput(props: ComponentProps<"form">) {
   const { status, sendMessage, stop } = useChatContext();
-  const [input, setInput] = useState('');
-  const isLoading = status === 'streaming' || status === 'submitted';
+  const [input, setInput] = useState("");
+  const isLoading = status === "streaming" || status === "submitted";
   const onStart = (e?: SyntheticEvent) => {
     e?.preventDefault();
     void sendMessage({ text: input });
-    setInput('');
+    setInput("");
   };
 
   useEffect(() => {
-    if (isLoading) document.getElementById('nd-ai-input')?.focus();
+    if (isLoading) document.getElementById("nd-ai-input")?.focus();
   }, [isLoading]);
 
   return (
     <form
       {...props}
-      className={cn('flex items-start pe-2', props.className)}
+      className={cn("flex items-start pe-2", props.className)}
       onSubmit={onStart}
     >
       <Input
         value={input}
-        placeholder={isLoading ? 'AI is answering...' : 'Ask AI'}
+        placeholder={isLoading ? "AI is answering..." : "Ask AI"}
         autoFocus
         className="p-4"
-        disabled={status === 'streaming' || status === 'submitted'}
+        disabled={status === "streaming" || status === "submitted"}
         onChange={(e) => {
           setInput(e.target.value);
         }}
         onKeyDown={(event) => {
-          if (!event.shiftKey && event.key === 'Enter') {
+          if (!event.shiftKey && event.key === "Enter") {
             onStart(event);
           }
         }}
@@ -113,8 +113,8 @@ function SearchAIInput(props: ComponentProps<'form'>) {
           type="button"
           className={cn(
             buttonVariants({
-              color: 'secondary',
-              className: 'transition-all rounded-full mt-2 gap-2',
+              color: "secondary",
+              className: "transition-all rounded-full mt-2 gap-2",
             }),
           )}
           onClick={stop}
@@ -128,8 +128,8 @@ function SearchAIInput(props: ComponentProps<'form'>) {
           type="submit"
           className={cn(
             buttonVariants({
-              color: 'secondary',
-              className: 'transition-all rounded-full mt-2',
+              color: "secondary",
+              className: "transition-all rounded-full mt-2",
             }),
           )}
           disabled={input.length === 0}
@@ -141,7 +141,7 @@ function SearchAIInput(props: ComponentProps<'form'>) {
   );
 }
 
-function List(props: Omit<ComponentProps<'div'>, 'dir'>) {
+function List(props: Omit<ComponentProps<"div">, "dir">) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -152,7 +152,7 @@ function List(props: Omit<ComponentProps<'div'>, 'dir'>) {
 
       container.scrollTo({
         top: container.scrollHeight,
-        behavior: 'instant',
+        behavior: "instant",
       });
     }
 
@@ -175,7 +175,7 @@ function List(props: Omit<ComponentProps<'div'>, 'dir'>) {
       ref={containerRef}
       {...props}
       className={cn(
-        'fd-scroll-container overflow-y-auto min-w-0 flex flex-col',
+        "fd-scroll-container overflow-y-auto min-w-0 flex flex-col",
         props.className,
       )}
     >
@@ -184,9 +184,9 @@ function List(props: Omit<ComponentProps<'div'>, 'dir'>) {
   );
 }
 
-function Input(props: ComponentProps<'textarea'>) {
+function Input(props: ComponentProps<"textarea">) {
   const ref = useRef<HTMLDivElement>(null);
-  const shared = cn('col-start-1 row-start-1', props.className);
+  const shared = cn("col-start-1 row-start-1", props.className);
 
   return (
     <div className="grid flex-1">
@@ -194,36 +194,37 @@ function Input(props: ComponentProps<'textarea'>) {
         id="nd-ai-input"
         {...props}
         className={cn(
-          'resize-none bg-transparent placeholder:text-fd-muted-foreground focus-visible:outline-none',
+          "resize-none bg-transparent placeholder:text-fd-muted-foreground focus-visible:outline-none",
           shared,
         )}
       />
-      <div ref={ref} className={cn(shared, 'break-all invisible')}>
-        {`${props.value?.toString() ?? ''}\n`}
+      <div ref={ref} className={cn(shared, "break-all invisible")}>
+        {`${props.value?.toString() ?? ""}\n`}
       </div>
     </div>
   );
 }
 
 const roleName: Record<string, string> = {
-  user: 'you',
-  assistant: 'fumadocs',
+  user: "you",
+  assistant: "fumadocs",
 };
 
 function Message({
   message,
   ...props
-}: { message: UIMessage } & ComponentProps<'div'>) {
-  let markdown = '';
-  let links: z.infer<typeof ProvideLinksToolSchema>['links'] = [];
+}: { message: UIMessage } & ComponentProps<"div">) {
+  let markdown = "";
+  let links: z.infer<typeof ProvideLinksToolSchema>["links"] = [];
 
   for (const part of message.parts ?? []) {
-    if (part.type === 'text') {
+    console.log(part);
+    if (part.type === "text") {
       markdown += part.text;
       continue;
     }
 
-    if (part.type === 'tool-provideLinks' && part.input) {
+    if (part.type === "tool-provideLinks" && part.input) {
       links = (part.input as z.infer<typeof ProvideLinksToolSchema>).links;
     }
   }
@@ -232,11 +233,11 @@ function Message({
     <div {...props}>
       <p
         className={cn(
-          'mb-1 text-sm font-medium text-fd-muted-foreground',
-          message.role === 'assistant' && 'text-fd-primary',
+          "mb-1 text-sm font-medium text-fd-muted-foreground",
+          message.role === "assistant" && "text-fd-primary",
         )}
       >
-        {roleName[message.role] ?? 'unknown'}
+        {roleName[message.role] ?? "unknown"}
       </p>
       <div className="prose text-sm">
         <Markdown text={markdown} />
@@ -246,6 +247,7 @@ function Message({
           {links.map((item, i) => (
             <Link
               key={i}
+              target="_blank"
               href={item.url}
               className="block text-xs rounded-lg border p-3 hover:bg-fd-accent hover:text-fd-accent-foreground"
             >
@@ -262,19 +264,19 @@ function Message({
 export function AISearchTrigger() {
   const [open, setOpen] = useState(false);
   const chat = useChat({
-    id: 'search',
+    id: "search",
     transport: new DefaultChatTransport({
-      api: '/api/chat',
+      api: "/api/chat",
     }),
   });
 
   const onKeyPress = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && open) {
+    if (e.key === "Escape" && open) {
       setOpen(false);
       e.preventDefault();
     }
 
-    if (e.key === '/' && (e.metaKey || e.ctrlKey) && !open) {
+    if (e.key === "/" && (e.metaKey || e.ctrlKey) && !open) {
       setOpen(true);
       e.preventDefault();
     }
@@ -284,8 +286,8 @@ export function AISearchTrigger() {
   onKeyPressRef.current = onKeyPress;
   useEffect(() => {
     const listener = (e: KeyboardEvent) => onKeyPressRef.current(e);
-    window.addEventListener('keydown', listener);
-    return () => window.removeEventListener('keydown', listener);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
   }, []);
 
   return (
@@ -294,8 +296,8 @@ export function AISearchTrigger() {
         <Presence present={open}>
           <div
             className={cn(
-              'fixed inset-0 p-2 right-(--removed-body-scroll-bar-size,0) flex flex-col pb-[8.375rem] items-center bg-fd-background/80 backdrop-blur-sm z-50',
-              open ? 'animate-fd-fade-in' : 'animate-fd-fade-out',
+              "fixed inset-0 p-2 right-(--removed-body-scroll-bar-size,0) flex flex-col pb-[8.375rem] items-center bg-fd-background/80 backdrop-blur-sm z-50",
+              open ? "animate-fd-fade-in" : "animate-fd-fade-out",
             )}
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -305,17 +307,14 @@ export function AISearchTrigger() {
             }}
           >
             <div className="sticky top-0 flex gap-2 items-center py-2 w-full max-w-[600px]">
-              <p className="text-xs flex-1 text-fd-muted-foreground">
-                Powered by Inkeep AI
-              </p>
               <button
                 aria-label="Close"
                 tabIndex={-1}
                 className={cn(
                   buttonVariants({
-                    size: 'icon-sm',
-                    color: 'secondary',
-                    className: 'rounded-full',
+                    size: "icon-sm",
+                    color: "secondary",
+                    className: "rounded-full",
                   }),
                 )}
                 onClick={() => setOpen(false)}
@@ -327,12 +326,12 @@ export function AISearchTrigger() {
               className="py-10 pr-2 w-full max-w-[600px] overscroll-contain"
               style={{
                 maskImage:
-                  'linear-gradient(to bottom, transparent, white 4rem, white calc(100% - 2rem), transparent 100%)',
+                  "linear-gradient(to bottom, transparent, white 4rem, white calc(100% - 2rem), transparent 100%)",
               }}
             >
               <div className="flex flex-col gap-4">
                 {chat.messages
-                  .filter((msg) => msg.role !== 'system')
+                  .filter((msg) => msg.role !== "system")
                   .map((item) => (
                     <Message key={item.id} message={item} />
                   ))}
@@ -342,22 +341,22 @@ export function AISearchTrigger() {
         </Presence>
         <div
           className={cn(
-            'fixed bottom-2 transition-[width,height] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] -translate-x-1/2 rounded-2xl border shadow-xl z-50 overflow-hidden',
+            "fixed bottom-2 transition-[width,height] duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] -translate-x-1/2 rounded-2xl border shadow-xl z-50 overflow-hidden",
             open
-              ? 'w-[min(600px,90vw)] bg-fd-popover h-32'
-              : 'w-40 h-10 bg-fd-secondary text-fd-secondary-foreground shadow-fd-background',
+              ? "w-[min(600px,90vw)] bg-fd-popover h-32"
+              : "w-40 h-10 bg-fd-secondary text-fd-secondary-foreground shadow-fd-background",
           )}
           style={{
-            left: 'calc(50% - var(--removed-body-scroll-bar-size,0px)/2)',
+            left: "calc(50% - var(--removed-body-scroll-bar-size,0px)/2)",
           }}
         >
           <Presence present={!open}>
             <button
               className={cn(
-                'absolute inset-0 text-center p-2 text-fd-muted-foreground text-sm transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground',
+                "absolute inset-0 text-center p-2 text-fd-muted-foreground text-sm transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground",
                 !open
-                  ? 'animate-fd-fade-in'
-                  : 'animate-fd-fade-out bg-fd-accent',
+                  ? "animate-fd-fade-in"
+                  : "animate-fd-fade-out bg-fd-accent",
               )}
               onClick={() => setOpen(true)}
             >
@@ -368,8 +367,8 @@ export function AISearchTrigger() {
           <Presence present={open}>
             <div
               className={cn(
-                'absolute inset-0 flex flex-col',
-                open ? 'animate-fd-fade-in' : 'animate-fd-fade-out',
+                "absolute inset-0 flex flex-col",
+                open ? "animate-fd-fade-in" : "animate-fd-fade-out",
               )}
             >
               <SearchAIInput className="flex-1" />
